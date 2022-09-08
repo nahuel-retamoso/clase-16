@@ -1,20 +1,23 @@
 const express = require('express')
 const hbs = require('hbs')
-const websocket = require('websocket')
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server);
 
 const ProductosApi = require('./knex.js')
+const chat = require('./chatknex.js')
 
 const productosApi = new ProductosApi()
+const chatApi = new chat()
 
 const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static('public'))
 
-app.set('view engine', 'hbs')
+app.set('view engine', hbs)
 app.set('views', './views')
-
-
 
 
 
@@ -31,9 +34,18 @@ app.get('/productos', (req, res) => {
     res.render('vista', { productos })
 });
 
+io.on('connection', (socket) => {
+    console.log('a user connected');
+});
 
-const PORT = 8080
-const server = app.listen(PORT, () => {
-    console.log(`Servidor http escuchando en el puerto ${server.address().port}`)
-})
-server.on("error", error => console.log(`Error en servidor ${error}`))
+io.on('new-message', (data) => {
+    const mensaje = chatApi.nuevoMensaje(data)
+    io.emit('messages', mensaje)
+});
+
+
+server.listen(8080, () => {
+    console.log('Servidor escuchando en el puerto 8080');
+});
+
+server.on("error", error => console.log(`Error en servidor ${error}`));
